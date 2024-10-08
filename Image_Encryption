@@ -8,10 +8,9 @@ typedef struct {
 
 // Function to read BMP image file
 Pixel* read_image(const char *filename, int *width, int *height, int *padding) {
-    // Open the file in binary read mode
     FILE *file = fopen(filename, "rb");
     if (!file) {
-        printf("Error: Unable to open file %s\n", filename);
+        fprintf(stderr, "Error: Unable to open file %s\n", filename);
         return NULL;
     }
 
@@ -19,18 +18,22 @@ Pixel* read_image(const char *filename, int *width, int *height, int *padding) {
     unsigned char header[54];
     fread(header, sizeof(unsigned char), 54, file);
 
-    // Extract width and height from header
+    // Extract width, height from header
     *width = *(int*)&header[18];
     *height = *(int*)&header[22];
 
     // Calculate padding (BMP rows must be a multiple of 4 bytes)
     *padding = (*width * 3) % 4;
 
-    // Allocate memory for image pixels (width * height pixels)
-    int size = (*width) * (*height);
-    Pixel *pixels = (Pixel*)malloc(size * sizeof(Pixel));
+    // Allocate memory for image pixels
+    Pixel *pixels = (Pixel*)malloc((*width) * (*height) * sizeof(Pixel));
+    if (!pixels) {
+        fprintf(stderr, "Error: Memory allocation failed.\n");
+        fclose(file);
+        return NULL;
+    }
 
-    // Read pixel data row by row (consider padding)
+    // Read pixel data (consider padding)
     for (int i = 0; i < *height; i++) {
         fread(&pixels[i * (*width)], sizeof(Pixel), *width, file);
         fseek(file, *padding, SEEK_CUR);  // Skip padding bytes
@@ -41,15 +44,14 @@ Pixel* read_image(const char *filename, int *width, int *height, int *padding) {
 }
 
 // Function to write BMP image file
-void write_image(const char *filename, Pixel *pixels, int width, int height, int padding) {
-    // Open the file in binary write mode
+void write_image(const char *filename, const Pixel *pixels, int width, int height, int padding) {
     FILE *file = fopen(filename, "wb");
     if (!file) {
-        printf("Error: Unable to save file %s\n", filename);
+        fprintf(stderr, "Error: Unable to save file %s\n", filename);
         return;
     }
 
-    // Create and write BMP file header
+    // Create BMP file header
     unsigned char header[54] = {
         0x42, 0x4D, // Signature
         0, 0, 0, 0, // File size
@@ -67,18 +69,12 @@ void write_image(const char *filename, Pixel *pixels, int width, int height, int
         0, 0, 0, 0  // Important colors
     };
 
-    // Set width and height in header
+    // Set width and height in the header
     *(int*)&header[18] = width;
     *(int*)&header[22] = height;
 
-    // Calculate file size
-    int fileSize = 54 + (width * height * 3) + (padding * height);
-    *(int*)&header[2] = fileSize;
-
-    // Write header
+    // Write header and pixel data with padding
     fwrite(header, sizeof(unsigned char), 54, file);
-
-    // Write pixel data row by row, adding padding for each row
     for (int i = 0; i < height; i++) {
         fwrite(&pixels[i * width], sizeof(Pixel), width, file);
         for (int j = 0; j < padding; j++) {
@@ -89,15 +85,50 @@ void write_image(const char *filename, Pixel *pixels, int width, int height, int
     fclose(file);
 }
 
-// Function to encrypt or decrypt the image by applying a basic mathematical operation
-void encrypt_decrypt_image(Pixel *pixels, int width, int height, int key, int mode) {
-    int size = width * height;
+// Function to encrypt or decrypt the image
+void process_image(Pixel *pixels, int size, int key, int encrypt) {
     for (int i = 0; i < size; i++) {
-        // Apply encryption/decryption by adding or subtracting the key
-        if (mode == 1) {
+        if (encrypt) {
             pixels[i].r = (pixels[i].r + key) % 256;
             pixels[i].g = (pixels[i].g + key) % 256;
             pixels[i].b = (pixels[i].b + key) % 256;
         } else {
             pixels[i].r = (pixels[i].r - key + 256) % 256;
-            pixels[i].g = (pixels[i].g - key + 256) %
+            pixels[i].g = (pixels[i].g - key + 256) % 256;
+            pixels[i].b = (pixels[i].b - key + 256) % 256;
+        }
+    }
+}
+
+int main() {
+    int width, height, padding;
+    const int key = 123;  // Encryption/Decryption key
+    char choice;
+
+    printf("Simple Image Encryption Tool\nChoose operation (E)ncrypt or (D)ecrypt: ");
+    scanf(" %c", &choice);
+
+    // Load the image
+    Pixel *image = read_image("input_image.bmp", &width, &height, &padding);
+    if (!image) {
+        return EXIT_FAILURE;
+    }
+
+    int size = width * height;
+
+    // Perform encryption or decryption
+    if (choice == 'E' || choice == 'e') {
+        process_image(image, size, key, 1);
+        write_image("encrypted_image.bmp", image, width, height, padding);
+        printf("Image encrypted and saved as 'encrypted_image.bmp'.\n");
+    } else if (choice == 'D' || choice == 'd') {
+        process_image(image, size, key, 0);
+        write_image("decrypted_image.bmp", image, width, height, padding);
+        printf("Image decrypted and saved as 'decrypted_image.bmp'.\n");
+    } else {
+        fprintf(stderr, "Invalid choice. Please choose 'E' or 'D'.\n");
+    }
+
+    free(image);
+    return EXIT_SUCCESS;
+}
