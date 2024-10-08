@@ -1,0 +1,6 @@
+// Sample pixel data (just a few pixels for demonstration purposes)
+Pixel pixels[256*256] = {
+    {{255, 0, 0}, {0, 255, 0}, {0, 0, 255}, ...}, // Red, Green, Blue pixels
+    {{128, 128, 128}, {255, 255, 255}, {0, 0, 0}, ...}, // Gray, White, Black pixels
+    ...
+};
