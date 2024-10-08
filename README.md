@@ -2,7 +2,7 @@
 
 ## Task-02
 
-# BMP Image Encryption/Decryption in C
+# BMP Image Encryption/Decryption 
 
 This program demonstrates how to read, encrypt, decrypt, and write a BMP image file using basic pixel manipulation. It operates on uncompressed 24-bit BMP files, where each pixel is represented by RGB (Red, Green, Blue) values. The program allows encryption and decryption of images by applying a simple key-based mathematical operation on the pixel values.
 
